@@ -1,1 +1,1 @@
-playwright install && gunicorn api.app:app
+playwright install && gunicorn api.app:app --timeout 120

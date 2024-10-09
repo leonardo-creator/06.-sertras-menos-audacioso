@@ -3,15 +3,24 @@ import requests
 from flask import Flask, send_file, g
 from io import BytesIO
 import urllib.parse
+import psutil
+import os
 from playwright.sync_api import sync_playwright
-
 
 app = Flask(__name__)
 
 # Configuração do logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def log_memory_usage():
+    """ Função para monitorar o uso de memória durante a execução """
+    process = psutil.Process(os.getpid())
+    memory_usage = process.memory_info().rss / (1024 * 1024)  # Em MB
+    logging.info(f"Uso de memória: {memory_usage:.2f} MB")
+
 def login_and_download_excel(email, password, filter_inputs):
+    log_memory_usage()  # Log do uso de memória antes do processo começar
+    
     with sync_playwright() as p:
         logging.info("Iniciando o navegador.")
         browser = p.chromium.launch(headless=True)
@@ -31,10 +40,9 @@ def login_and_download_excel(email, password, filter_inputs):
             page.fill("#edtLoginSenha", password)
             logging.debug(f"Campo de senha preenchido com: {'*' * len(password)}")
 
-            page.press("#btnLogin", "Enter")  # Ou o seletor correto para o botão
+            page.press("#btnLogin", "Enter")
             logging.info("Pressionando Enter para enviar o formulário de login.")
 
-            # Espera até a URL mudar após o login
             logging.info("Aguardando redirecionamento após o login.")
             page.wait_for_url("https://gestaodeterceiros.sertras.com/contratante/dashboard/")
             logging.info("Login bem-sucedido, redirecionado para a página de relatórios.")
@@ -51,6 +59,8 @@ def login_and_download_excel(email, password, filter_inputs):
             logging.info("Obtendo cookies para o download.")
             logging.debug(f"Cookies obtidos: {cookies_dict}")
 
+            log_memory_usage()  # Log do uso de memória antes de iniciar o download
+            
             # Vamos baixar apenas o primeiro arquivo para este exemplo
             excel_url = urls[0]
             logging.info(f"Baixando o arquivo: {excel_url}")
@@ -58,6 +68,7 @@ def login_and_download_excel(email, password, filter_inputs):
 
             if response.status_code == 200:
                 logging.info("Download concluído, retornando o arquivo.")
+                log_memory_usage()  # Log do uso de memória após o download
                 return BytesIO(response.content)  # Retorna o conteúdo como BytesIO, em vez de salvar no disco
             else:
                 logging.error(f"Erro ao baixar o arquivo: {response.status_code}")
@@ -68,6 +79,7 @@ def login_and_download_excel(email, password, filter_inputs):
         finally:
             browser.close()
             logging.info("Navegador fechado.")
+            log_memory_usage()  # Log do uso de memória após fechar o navegador
 
 
 @app.route('/download/<email>/<password>/<filters>', methods=['GET'])
@@ -102,6 +114,7 @@ def cleanup(response):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 ##http://127.0.0.1:5000/download/leonardojuvencio@brkambiental.com.br/Lj@2024.senha%23%40%211/4165|4600011099|28.156.054(0001-60*2741|4600009799|11.070.002(0001-73
