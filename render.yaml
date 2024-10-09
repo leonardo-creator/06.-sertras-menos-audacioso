@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: app-name
+    env: python
+    plan: free  # ou use outro plano, dependendo da sua necessidade
+    buildCommand: 
+      - apt-get update && apt-get install -y \
+        libgstgl-1.0-0 \
+        libgstcodecparsers-1.0-0 \
+        libenchant-2-2 \
+        libsecret-1-0 \
+        libmanette-0.2-0 \
+        libgles2
+      - pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PORT
+        value: 10000  # A porta que seu app vai usar
