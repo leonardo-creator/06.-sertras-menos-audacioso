@@ -98,10 +98,10 @@ def download_and_return_in_memory(email, password, filters):
 
     if excel_file:
         return send_file(
-            excel_file,
-            mimetype='application/vnd.ms-excel',
+            BytesIO(output.getvalue().encode()),
+            mimetype='text/csv',
             as_attachment=True,
-            download_name=f"relatorio_{email}.xls"
+            download_name=f"relatorio_{email}.csv"
         )
     else:
         return "Erro ao baixar o arquivo", 500
