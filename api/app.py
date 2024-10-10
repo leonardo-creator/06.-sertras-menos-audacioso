@@ -6,6 +6,7 @@ import urllib.parse
 import psutil
 import os
 from playwright.sync_api import sync_playwright
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -94,15 +95,25 @@ def download_and_return_in_memory(email, password, filters):
 
     g.email = email
 
+    # Faz o download do arquivo Excel
     excel_file = login_and_download_excel(email, password, filter_inputs)
 
     if excel_file:
-        return send_file(
-            BytesIO(output.getvalue().encode()),
-            mimetype='text/csv',
-            as_attachment=True,
-            download_name=f"relatorio_{email}.csv"
-        )
+        # Converte o conteúdo do Excel para um DataFrame pandas
+        try:
+            # Lê o conteúdo do arquivo Excel diretamente do BytesIO
+            df = pd.read_excel(excel_file)
+
+            # Converte o DataFrame para uma lista de dicionários (JSON-like)
+            data_as_dict = df.to_dict(orient='records')
+
+            # Retorna o JSON como resposta
+            return jsonify(data_as_dict)
+
+        except Exception as e:
+            logging.error(f"Erro ao processar o arquivo Excel: {e}")
+            return "Erro ao processar o arquivo Excel", 500
+
     else:
         return "Erro ao baixar o arquivo", 500
 
